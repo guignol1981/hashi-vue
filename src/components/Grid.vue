@@ -1,6 +1,6 @@
 <template>
     <div
-        :class="`relative grid grid-cols-${props.size} grid-rows-${props.size} gap-2 max-w-lg border z-10`"
+        :class="`relative grid grid-cols-4 grid-rows-${props.size} z-10 max-w-lg gap-2 border`"
     >
         <div v-for="i in Math.pow(props.size, 2)" class="aspect-square border">
             <slot

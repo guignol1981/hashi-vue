@@ -1,10 +1,9 @@
 <template>
-    {{ selectedIslandsPositions }}
     <Grid>
         <template #default="{ col, row }">
             <div class="relative flex h-full items-center justify-center">
                 <Island
-                    :ref="(el) => islands.push(el)"
+                    :ref="(el) => islands.push(el as any)"
                     v-if="level[row][col]"
                     :value="level[row][col]"
                     @click="onIslandClick(row, col)"
@@ -16,6 +15,7 @@
                     test
                 </div>
                 <Cursor
+                    ref="cursor"
                     v-if="
                         cursorPosition.col === col && cursorPosition.row === row
                     "
@@ -31,6 +31,7 @@ import Island from './Island.vue';
 import { ref } from 'vue';
 import { drawBridgeBetweenIsland } from '../utils/bridges.utils';
 import Cursor from './Cursor.vue';
+
 const level = [
     [1, 1, 0, 0],
     [1, 1, 0, 0],
@@ -39,8 +40,53 @@ const level = [
 ];
 
 const islands = ref<(typeof Island)[]>([]);
+const cursor = ref<typeof Cursor | null>(null);
 const cursorPosition = ref<{ col: number; row: number }>({ col: 0, row: 0 });
 const selectedIslandsPositions = ref<{ col: number; row: number }[]>([]);
+
+window.addEventListener('keydown', (e: KeyboardEvent) => {
+    switch (e.code) {
+        case 'ArrowUp':
+            if (cursor.value?.locked) break;
+
+            if (cursorPosition.value.row > 0) {
+                cursorPosition.value.row--;
+            }
+            break;
+        case 'ArrowDown':
+            if (cursor.value?.locked) break;
+
+            if (cursorPosition.value.row < level.length - 1) {
+                cursorPosition.value.row++;
+            }
+            break;
+        case 'ArrowLeft':
+            if (cursor.value?.locked) break;
+
+            if (cursorPosition.value.col > 0) {
+                cursorPosition.value.col--;
+            }
+            break;
+        case 'ArrowRight':
+            if (cursor.value?.locked) break;
+
+            if (cursorPosition.value.col < level[0].length - 1) {
+                cursorPosition.value.col++;
+            }
+            break;
+        case 'Space':
+            cursor.value?.lockCursor();
+            break;
+    }
+});
+
+window.addEventListener('keyup', (e: KeyboardEvent) => {
+    switch (e.code) {
+        case 'Space':
+            cursor.value?.unlockCursor();
+            break;
+    }
+});
 
 const onIslandClick = (row: number, col: number) => {
     if (selectedIslandsPositions.value.length === 0) {
