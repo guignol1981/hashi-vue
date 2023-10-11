@@ -1,13 +1,16 @@
 <template>
     <span
-        class="border-2 h-12 w-12 border-black grid place-content-center aspect-square rounded-full cursor-pointer"
+        class="grid aspect-square h-12 w-12 cursor-pointer place-content-center rounded-full border-2 border-black"
         :class="{
-            'bg-green-400': connections === props.value,
+            'bg-green-400': connections.length === props.value,
             'bg-blue-400': props.state === 'active',
             'bg-gray-400': props.state === 'inactive',
         }"
     >
         {{ props.value }}
+        <p>
+            {{ connections.length }}
+        </p>
     </span>
 </template>
 
@@ -25,23 +28,24 @@ const props = withDefaults(
     },
 );
 
-const connections = ref(0);
+const connections = ref<HTMLElement[]>([]);
 
-const addConnection = () => {
-    connections.value++;
+const addConnection = (el: HTMLElement) => {
+    connections.value.push(el);
 };
 
-const removeConnection = () => {
-    connections.value--;
+const acceptConnection = () => {
+    return connections.value.length < props.value;
 };
 
 const resetConnections = () => {
-    connections.value = 0;
+    connections.value = [];
 };
 
 defineExpose({
     addConnection,
-    removeConnection,
     resetConnections,
+    acceptConnection,
+    connections,
 });
 </script>
