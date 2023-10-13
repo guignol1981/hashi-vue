@@ -1,15 +1,13 @@
-export const drawBridgeBetweenIsland = (
+export const drawBridgeBetweenIslands = (
     island1: HTMLElement,
     island2: HTMLElement,
-    double = false,
+    island2Id: string,
 ) => {
     const bridge = document.createElement('div');
 
     bridge.classList.add('border-2', 'border-black', 'absolute');
 
-    if (!double) {
-        bridge.classList.add('border-dashed');
-    }
+    bridge.id = `bridge-${island2Id}`;
 
     bridge.style.setProperty('z-index', '-1');
 
@@ -34,11 +32,7 @@ export const drawBridgeBetweenIsland = (
         `${getDistanceBetweenIslands(island1, island2)}px`,
     );
 
-    bridge.onclick = () => {
-        island1.removeChild(bridge);
-    };
-
-    island1.appendChild(bridge);
+    return bridge;
 };
 
 export const getDistanceBetweenIslands = (

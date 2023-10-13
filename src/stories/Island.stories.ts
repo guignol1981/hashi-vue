@@ -9,7 +9,7 @@ const meta = {
 } satisfies Meta<typeof Island>;
 
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj<typeof Island>;
 
 export const Default: Story = {
     args: {},
@@ -30,11 +30,5 @@ export const PropInactive: Story = {
 export const PropActive: Story = {
     args: {
         state: 'active',
-    },
-};
-
-export const PropCompleted: Story = {
-    args: {
-        state: 'completed',
     },
 };

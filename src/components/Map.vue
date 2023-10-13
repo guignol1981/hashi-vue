@@ -4,13 +4,7 @@
             <div class="relative flex h-full items-center justify-center">
                 <component
                     v-if="level[row][col]"
-                    :ref="
-                        (el: any) =>
-                            islands.push({
-                                island: el,
-                                id: level[row][col]!.id,
-                            })
-                    "
+                    :ref="(el: any) => addIslandRef(el, level[row][col]!.id)"
                     :is="level[row][col]?.component"
                     :value="level[row][col]?.value"
                 />
@@ -30,7 +24,7 @@ import Grid from './Grid.vue';
 import Island from './Island.vue';
 import { ref } from 'vue';
 import Cursor from './Cursor.vue';
-import { drawBridgeBetweenIsland } from '../utils/bridges.utils';
+import { drawBridgeBetweenIslands } from '../utils/bridges.utils';
 import { v4 as uuidv4 } from 'uuid';
 
 const level: ({
@@ -60,7 +54,22 @@ const level: ({
             connections: [],
         },
     ],
-    [null, null, null, null],
+    [
+        {
+            id: uuidv4(),
+            value: 2,
+            component: Island,
+            connections: [],
+        },
+        null,
+        {
+            id: uuidv4(),
+            value: 2,
+            component: Island,
+            connections: [],
+        },
+        null,
+    ],
     [
         {
             id: uuidv4(),
@@ -88,7 +97,16 @@ const level: ({
 const cursor = ref<typeof Cursor | null>(null);
 
 const cursorPosition = ref<{ col: number; row: number }>({ col: 0, row: 0 });
-const islands = ref<{ island: typeof Island; id: string }[]>([]);
+const islandsWithIds = ref<{ island: typeof Island; id: string }[]>([]);
+
+const addIslandRef = (el: typeof Island, id: string) => {
+    if (islandsWithIds.value.find((i) => i.id === id)) return;
+
+    islandsWithIds.value.push({
+        island: el,
+        id,
+    });
+};
 
 const manageConnectionsFromCursorPosition = (
     direction: 'up' | 'down' | 'left' | 'right',
@@ -160,25 +178,74 @@ const manageConnectionsFromCursorPosition = (
 
     if (!previousLevelItem || !netLevelItem) return;
 
-    const island1 = islands.value.find(
+    const islandWithId1 = islandsWithIds.value.find(
         (i) => i.id === previousLevelItem?.id,
-    )!.island;
+    );
 
-    const island2 = islands.value.find(
+    const islandWithId2 = islandsWithIds.value.find(
         (i) => i.id === netLevelItem?.id,
-    )!.island;
+    );
 
-    if (!island1 || !island2) return;
+    if (!islandWithId1 || !islandWithId2) return;
 
-    if (island1.acceptConnection() && island2.acceptConnection()) {
-        island1.addConnection(island2.$el);
-        island2.addConnection(island1.$el);
+    if (
+        islandWithId1.island.acceptConnection() &&
+        islandWithId2.island.acceptConnection() &&
+        noBridgesBetweenIslands(islandWithId1, islandWithId2)
+    ) {
+        islandWithId1.island.addConnection(
+            islandWithId2.island.$el,
+            islandWithId2.id,
+        );
+        islandWithId2.island.addConnection(
+            islandWithId1.island.$el,
+            islandWithId1.id,
+        );
     } else {
-        island1.resetConnections();
-        island2.resetConnections();
+        islandWithId1.island.removeConnection(islandWithId2.id);
+        islandWithId2.island.removeConnection(islandWithId1.id);
     }
+};
 
-    drawAllBridges();
+const noBridgesBetweenIslands = (
+    islandWithId1: { island: typeof Island; id: string },
+    islandWithId2: { island: typeof Island; id: string },
+) => {
+    const island1RowPos = level.findIndex((row) =>
+        row.find((i) => i?.id === islandWithId1.id),
+    );
+    const island1ColPos = level[island1RowPos].findIndex(
+        (i) => i?.id === islandWithId1.id,
+    );
+
+    const island2RowPos = level.findIndex((row) =>
+        row.find((i) => i?.id === islandWithId2.id),
+    );
+    const island2ColPos = level[island2RowPos].findIndex(
+        (i) => i?.id === islandWithId2.id,
+    );
+
+    if (island1RowPos === island2RowPos) {
+        const min = Math.min(island1ColPos, island2ColPos);
+        const max = Math.max(island1ColPos, island2ColPos);
+
+        for (let i = min + 1; i < max; i++) {
+            if (level[island1RowPos][i] !== null) {
+                return false;
+            }
+        }
+    } else if (island1ColPos === island2ColPos) {
+        const min = Math.min(island1RowPos, island2RowPos);
+        const max = Math.max(island1RowPos, island2RowPos);
+
+        for (let i = min + 1; i < max; i++) {
+            if (level[i][island1ColPos] !== null) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 };
 
 window.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -234,10 +301,16 @@ window.addEventListener('keydown', (e: KeyboardEvent) => {
 });
 
 const drawAllBridges = () => {
-    islands.value.forEach((island) => {
-        island.island.connections.forEach((connection: HTMLElement) => {
-            drawBridgeBetweenIsland(island.island.$el, connection);
-        });
+    islandsWithIds.value.forEach((island) => {
+        island.island.connections.forEach(
+            (connection: { el: HTMLElement; id: string }) => {
+                drawBridgeBetweenIslands(
+                    island.island.$el,
+                    connection.el,
+                    connection.id,
+                );
+            },
+        );
     });
 };
 
