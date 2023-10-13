@@ -3,10 +3,10 @@
         <template #default="{ col, row }">
             <div class="relative flex h-full items-center justify-center">
                 <component
-                    v-if="level[row][col]"
-                    :ref="(el: any) => addIslandRef(el, level[row][col]!.id)"
-                    :is="level[row][col]?.component"
-                    :value="level[row][col]?.value"
+                    v-if="level[row][col].id"
+                    :ref="(el: any) => addIslandRef(el, level[row][col].id!)"
+                    :is="level[row][col]!.component"
+                    :value="level[row][col]!.value"
                 />
                 <Cursor
                     ref="cursor"
@@ -17,6 +17,9 @@
             </div>
         </template>
     </Grid>
+    <pre>
+        {{ level.map((row) => row.map((cell) => ({ bridges: cell.bridges }))) }}
+    </pre>
 </template>
 
 <script setup lang="ts">
@@ -24,34 +27,37 @@ import Grid from './Grid.vue';
 import Island from './Island.vue';
 import { ref } from 'vue';
 import Cursor from './Cursor.vue';
-import { drawBridgeBetweenIslands } from '../utils/bridges.utils';
 import { v4 as uuidv4 } from 'uuid';
 
-const level: ({
-    id: string;
-    value: number;
-    component: typeof Island;
-    connections: { row: number; col: number }[];
-} | null)[][] = [
+interface LevelCell {
+    id?: string;
+    value?: number;
+    component?: typeof Island;
+    bridges: string[];
+}
+
+const level = ref<LevelCell[][]>([
     [
         {
             id: uuidv4(),
             value: 1,
             component: Island,
-            connections: [],
+            bridges: [],
         },
         {
             id: uuidv4(),
             value: 1,
             component: Island,
-            connections: [],
+            bridges: [],
         },
-        null,
+        {
+            bridges: [],
+        },
         {
             id: uuidv4(),
             value: 2,
             component: Island,
-            connections: [],
+            bridges: [],
         },
     ],
     [
@@ -59,40 +65,59 @@ const level: ({
             id: uuidv4(),
             value: 2,
             component: Island,
-            connections: [],
+            bridges: [],
         },
-        null,
+        {
+            bridges: [],
+        },
         {
             id: uuidv4(),
             value: 2,
             component: Island,
-            connections: [],
+            bridges: [],
         },
-        null,
+        {
+            bridges: [],
+        },
     ],
     [
         {
             id: uuidv4(),
             value: 1,
             component: Island,
-            connections: [],
+            bridges: [],
         },
         {
             id: uuidv4(),
             value: 1,
             component: Island,
-            connections: [],
+            bridges: [],
         },
-        null,
+        {
+            bridges: [],
+        },
         {
             id: uuidv4(),
             value: 2,
             component: Island,
-            connections: [],
+            bridges: [],
         },
     ],
-    [null, null, null, null],
-];
+    [
+        {
+            bridges: [],
+        },
+        {
+            bridges: [],
+        },
+        {
+            bridges: [],
+        },
+        {
+            bridges: [],
+        },
+    ],
+]);
 
 const cursor = ref<typeof Cursor | null>(null);
 
@@ -111,18 +136,9 @@ const addIslandRef = (el: typeof Island, id: string) => {
 const manageConnectionsFromCursorPosition = (
     direction: 'up' | 'down' | 'left' | 'right',
 ) => {
-    let previousLevelItem: {
-        id: string;
-        value: number;
-        component: typeof Island;
-        connections: { row: number; col: number }[];
-    } | null = null;
-    let netLevelItem: {
-        id: string;
-        value: number;
-        component: typeof Island;
-        connections: { row: number; col: number }[];
-    } | null = null;
+    let previousLevelItem: LevelCell | null = null;
+    let netLevelItem: LevelCell | null = null;
+    const cellsInLine: LevelCell[] = [];
 
     if (direction === 'up' || direction === 'down') {
         for (
@@ -130,22 +146,26 @@ const manageConnectionsFromCursorPosition = (
             i >= 0;
             i--
         ) {
-            if (level[i][cursorPosition.value.col] !== null) {
-                previousLevelItem = level[i][cursorPosition.value.col];
+            cellsInLine.push(level.value[i][cursorPosition.value.col]);
+
+            if (level.value[i][cursorPosition.value.col].id) {
+                netLevelItem = level.value[i][cursorPosition.value.col];
                 break;
             }
         }
 
         for (
             let i = cursorPosition.value.row + (direction === 'down' ? 1 : 0);
-            i < level.length;
+            i < level.value.length;
             i++
         ) {
+            cellsInLine.push(level.value[i][cursorPosition.value.col]);
+
             if (
-                level[i][cursorPosition.value.col] !== null &&
-                previousLevelItem !== level[i][cursorPosition.value.col]
+                level.value[i][cursorPosition.value.col].id &&
+                netLevelItem !== level.value[i][cursorPosition.value.col]
             ) {
-                netLevelItem = level[i][cursorPosition.value.col];
+                previousLevelItem = level.value[i][cursorPosition.value.col];
                 break;
             }
         }
@@ -155,22 +175,26 @@ const manageConnectionsFromCursorPosition = (
             i >= 0;
             i--
         ) {
-            if (level[cursorPosition.value.row][i] !== null) {
-                previousLevelItem = level[cursorPosition.value.row][i];
+            cellsInLine.push(level.value[cursorPosition.value.row][i]);
+
+            if (level.value[cursorPosition.value.row][i].id) {
+                previousLevelItem = level.value[cursorPosition.value.row][i];
                 break;
             }
         }
 
         for (
             let i = cursorPosition.value.col + (direction === 'right' ? 1 : 0);
-            i < level[0]!.length;
+            i < level.value[0]!.length;
             i++
         ) {
+            cellsInLine.push(level.value[cursorPosition.value.row][i]);
+
             if (
-                level[cursorPosition.value.row][i] !== null &&
-                previousLevelItem !== level[cursorPosition.value.row][i]
+                level.value[cursorPosition.value.row][i].id &&
+                previousLevelItem !== level.value[cursorPosition.value.row][i]
             ) {
-                netLevelItem = level[cursorPosition.value.row][i];
+                netLevelItem = level.value[cursorPosition.value.row][i];
                 break;
             }
         }
@@ -191,7 +215,11 @@ const manageConnectionsFromCursorPosition = (
     if (
         islandWithId1.island.acceptConnection() &&
         islandWithId2.island.acceptConnection() &&
-        noBridgesBetweenIslands(islandWithId1, islandWithId2)
+        !cellsInLine.filter(
+            (cell) =>
+                !cell.id &&
+                cell.bridges.filter((b) => b !== islandWithId2.id).length,
+        ).length
     ) {
         islandWithId1.island.addConnection(
             islandWithId2.island.$el,
@@ -201,50 +229,17 @@ const manageConnectionsFromCursorPosition = (
             islandWithId1.island.$el,
             islandWithId1.id,
         );
+
+        cellsInLine.forEach((cb) => {
+            cb.bridges.push(islandWithId2.id!);
+        });
     } else {
         islandWithId1.island.removeConnection(islandWithId2.id);
         islandWithId2.island.removeConnection(islandWithId1.id);
-    }
-};
 
-const noBridgesBetweenIslands = (
-    islandWithId1: { island: typeof Island; id: string },
-    islandWithId2: { island: typeof Island; id: string },
-) => {
-    const island1RowPos = level.findIndex((row) =>
-        row.find((i) => i?.id === islandWithId1.id),
-    );
-    const island1ColPos = level[island1RowPos].findIndex(
-        (i) => i?.id === islandWithId1.id,
-    );
-
-    const island2RowPos = level.findIndex((row) =>
-        row.find((i) => i?.id === islandWithId2.id),
-    );
-    const island2ColPos = level[island2RowPos].findIndex(
-        (i) => i?.id === islandWithId2.id,
-    );
-
-    if (island1RowPos === island2RowPos) {
-        const min = Math.min(island1ColPos, island2ColPos);
-        const max = Math.max(island1ColPos, island2ColPos);
-
-        for (let i = min + 1; i < max; i++) {
-            if (level[island1RowPos][i] !== null) {
-                return false;
-            }
-        }
-    } else if (island1ColPos === island2ColPos) {
-        const min = Math.min(island1RowPos, island2RowPos);
-        const max = Math.max(island1RowPos, island2RowPos);
-
-        for (let i = min + 1; i < max; i++) {
-            if (level[i][island1ColPos] !== null) {
-                return false;
-            }
-        }
-
-        return true;
+        cellsInLine.forEach((cb) => {
+            cb.bridges = cb.bridges.filter((b) => b !== islandWithId2.id);
+        });
     }
 };
 
@@ -269,7 +264,7 @@ window.addEventListener('keydown', (e: KeyboardEvent) => {
                 break;
             }
 
-            if (cursorPosition.value.row < level.length - 1) {
+            if (cursorPosition.value.row < level.value.length - 1) {
                 cursorPosition.value.row++;
             }
             break;
@@ -289,7 +284,7 @@ window.addEventListener('keydown', (e: KeyboardEvent) => {
                 break;
             }
 
-            if (cursorPosition.value.col < level[0].length - 1) {
+            if (cursorPosition.value.col < level.value[0].length - 1) {
                 cursorPosition.value.col++;
             }
             break;
@@ -299,20 +294,6 @@ window.addEventListener('keydown', (e: KeyboardEvent) => {
             break;
     }
 });
-
-const drawAllBridges = () => {
-    islandsWithIds.value.forEach((island) => {
-        island.island.connections.forEach(
-            (connection: { el: HTMLElement; id: string }) => {
-                drawBridgeBetweenIslands(
-                    island.island.$el,
-                    connection.el,
-                    connection.id,
-                );
-            },
-        );
-    });
-};
 
 window.addEventListener('keyup', (e: KeyboardEvent) => {
     switch (e.code) {
